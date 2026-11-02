@@ -27,20 +27,20 @@ def es_admin():
 def home():
     eventos = cargar()
     eventos = sorted(eventos, key=lambda x: x.get('fecha',''), reverse=True)
-    admin_btn = "<a href='/admin'><button>🔒 Admin</button></a>" if not es_admin() else "<a href='/logout'><button style='background:red;color:white'>Salir Admin</button></a> <a href='/nuevo'><button>+ Nuevo Evento</button></a>"
+    admin_btn = "<a href='/admin'><button>🔒 Admin</button></a>" if not es_admin() else "<a href='/logout'><button style='background:#ff4444;color:white'>Salir Admin</button></a> <a href='/nuevo'><button>+ Nuevo Evento</button></a>"
     
     html_eventos = ""
     for e in eventos:
-        editar_link = f"<a href='/editar/{e['id']}' style='color:#00ff88'>✏️ Editar</a> | <a href='/eliminar/{e['id']}' style='color:red'>🗑️ Eliminar</a>" if es_admin() else ""
-        estado_color = "red" if e['estado']=='vivo' else "green" if e['estado']=='finalizado' else "#555"
+        editar_link = f"<a href='/editar/{e['id']}' style='color:#00ff88'>✏️ Editar</a> | <a href='/eliminar/{e['id']}' style='color:#ff6666'>🗑️ Eliminar</a>" if es_admin() else ""
+        estado_color = "#ff4444" if e['estado']=='vivo' else "#00ff88" if e['estado']=='finalizado' else "#888"
         html_eventos += f"""
         <div style='background:#1e1e1e;padding:15px;border-radius:12px;margin:15px 0;border-left:4px solid #00ff88'>
-            <div style='display:flex;justify-content:space-between'><b>{e['titulo']}</b><span style='background:{estado_color};padding:4px 8px;border-radius:6px;font-size:11px'>{e['estado'].upper()}</span></div>
+            <div style='display:flex;justify-content:space-between'><b>{e['titulo']}</b><span style='background:{estado_color};padding:4px 8px;border-radius:6px;font-size:11px;color:black'>{e['estado'].upper()}</span></div>
             <p>📅 {e['fecha']} | 📍 {e['lugar']}</p>
             <p>{e['descripcion']}</p>
             <b style='color:#00ff88'>{e.get('marcador','')}</b><br><br>
             {editar_link}
-            <br><a href='https://wa.me/?text=Evento LOS TOXICOS: {e['titulo']} el {e['fecha']} en {e['lugar']} - Mira: https://los-toxicos.onrender.com' target='_blank' style='color:#25D366'>📲 Compartir por WhatsApp</a>
+            <br><br><a href='https://wa.me/?text=Evento LOS TOXICOS: {e['titulo']} el {e['fecha']} en {e['lugar']} - Mira: https://los-toxicos.onrender.com' target='_blank' style='color:#25D366'>📲 Compartir WhatsApp</a>
         </div>
         """
     if not html_eventos:
@@ -56,26 +56,34 @@ def home():
         {admin_btn}
     </div>
     {html_eventos}
-    <p style='text-align:center;margin-top:30px;opacity:0.5'>Contraseña admin solo para el encargado</p>
     """
 
 @app.route('/admin', methods=['GET','POST'])
 def admin():
     if request.method == 'POST':
-        if request.form.get('password') == PASSWORD:
+        escrita = request.form.get('password','').strip()
+        # Acepta con o sin espacios y sin importar mayusculas
+        if escrita.lower() == PASSWORD.lower():
             session['admin'] = True
             return redirect('/')
         else:
-            return "<h3 style='color:red'>Contraseña incorrecta</h3><a href='/admin'>Intentar de nuevo</a>"
+            return f"""
+            <meta name='viewport' content='width=device-width, initial-scale=1'>
+            <style>body{{font-family:sans-serif;background:#0f0f0f;color:white;padding:20px;text-align:center}}</style>
+            <h3 style='color:#ff6666'>Contraseña incorrecta: escribiste '{escrita}'</h3>
+            <p>La correcta es: toxicos-1.0</p>
+            <a href='/admin' style='color:#00ff88'>Intentar de nuevo</a>
+            """
     return """
     <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <style>body{font-family:sans-serif;background:#0f0f0f;color:white;padding:20px;text-align:center} input{padding:12px;width:80%;border-radius:8px;border:none;margin:10px} button{background:#00ff88;padding:12px 20px;border:none;border-radius:8px;font-weight:bold}</style>
+    <style>body{font-family:sans-serif;background:#0f0f0f;color:white;padding:20px;text-align:center} input{padding:14px;width:85%;border-radius:8px;border:none;margin:15px;font-size:16px} button{background:#00ff88;padding:14px 30px;border:none;border-radius:8px;font-weight:bold;font-size:16px}</style>
     <h2>🔒 Admin Los Tóxicos</h2>
+    <p>Escribe la contraseña</p>
     <form method='post'>
-    <input type='password' name='password' placeholder='Contraseña'><br>
+    <input type='text' name='password' placeholder='toxicos-1.0' autocomplete='off'><br>
     <button type='submit'>Entrar</button>
     </form>
-    <br><a href='/' style='color:#00ff88'>Volver</a>
+    <br><br><a href='/' style='color:#00ff88'>Volver</a>
     """
 
 @app.route('/logout')
@@ -151,7 +159,7 @@ def form_html(titulo_form, e=None):
       <option value='vivo' {'selected' if est=='vivo' else ''}>En Vivo</option>
       <option value='finalizado' {'selected' if est=='finalizado' else ''}>Finalizado</option>
     </select>
-    <textarea name='descripcion' placeholder='Descripcion del evento'> {d}</textarea>
+    <textarea name='descripcion' placeholder='Descripcion del evento'>{d}</textarea>
     <input name='marcador' placeholder='Marcador ej: 2-1' value='{m}'>
     <button type='submit'>Guardar</button>
     </form>
