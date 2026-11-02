@@ -7,7 +7,6 @@ app.secret_key = "los-toxicos-2024-secret"
 DATA_FILE = "eventos.json"
 PASSWORD = "toxicos-1.0"
 
-# LINKS OFICIALES
 LINK_WHATSAPP = "https://chat.whatsapp.com/KlGw8PxxQYWD0xYLuBlZpk?s=cl&p=a&iam=2"
 LINK_FACEBOOK = "https://www.facebook.com/profile.php?id=100024266709108"
 LINK_TIKTOK_TOXICOS = "https://www.tiktok.com/@toxicos.de.bermuda?_r=1&_t=ZS-9B3UA4rcikW"
@@ -60,8 +59,8 @@ def estilos():
         color:white;
         font-size:14px;
     }
-    .wa{ background:#25D366; box-shadow: 0 0 15px #25D36680; }
-    .fb{ background:#1877F2; box-shadow: 0 0 15px #1877F280; }
+    .wa{ background:#25D366; }
+    .fb{ background:#1877F2; }
     .tt{ background:#000; border:1px solid #a855f7; }
     .tt2{ background:#1a1a1a; border:1px solid #555; }
     """
@@ -87,12 +86,10 @@ def home():
     redes = f"""
     <div style='text-align:center;margin-top:25px;padding:22px;background:rgba(0,0,0,0.55);border-radius:20px;border:1px solid rgba(168,85,247,0.2)'>
         <h3 style='color:#a855f7;margin:0 0 15px 0;'>🔥 SÍGUENOS 🔥</h3>
-        
         <div style='margin-bottom:12px'>
             <a href='{LINK_WHATSAPP}' target='_blank' class='btn-social wa'>💬 WhatsApp TÓXICOS</a>
             <a href='{LINK_FACEBOOK}' target='_blank' class='btn-social fb'>👥 Facebook</a>
         </div>
-
         <div style='border-top:1px solid rgba(255,255,255,0.1);margin:15px 0;padding-top:15px'>
             <p style='font-size:13px;opacity:0.6;margin:0 0 10px 0;letter-spacing:1px'>TIKTOKS OFICIALES</p>
             <a href='{LINK_TIKTOK_TOXICOS}' target='_blank' class='btn-social tt'>☠️ TÓXICOS DE BERMUDA</a><br>
@@ -100,20 +97,10 @@ def home():
             <a href='{LINK_TIKTOK_BOSTO}' target='_blank' class='btn-social tt2'>⚔️ BOSTO</a>
             <a href='{LINK_TIKTOK_RONAN}' target='_blank' class='btn-social tt2'>🔥 RONAN</a>
         </div>
-
-        <p style='font-size:11px;opacity:0.4;margin-top:18px'>HSR RAMSES EDITION - TÓXICOS DE BERMUDA</p>
+        <p style='font-size:11px;opacity:0.4;margin-top:18px'>HSR RAMSES EDITION</p>
     </div>
     """
-
-    return f"""
-    <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <style>{estilos()} body{{font-family:sans-serif;color:white;padding:18px;max-width:620px;margin:auto}} h1{{color:#a855f7;text-align:center;text-shadow:0 0 18px #a855f7, 0 0 35px #a855f780;margin:10px 0 0 0;line-height:1.1}} </style>
-    <h1>☠️ TÓXICOS DE<br>BERMUDA ☠️</h1>
-    <p style='text-align:center;opacity:0.7;letter-spacing:2px;font-size:13px;margin-top:5px'>HSR RAMSES EDITION</p>
-    <div style='display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px 0'><h2 style='margin:0'>Eventos</h2>{admin_btn}</div>
-    {html_eventos}
-    {redes}
-    """
+    return f"<meta name='viewport' content='width=device-width, initial-scale=1'><style>{estilos()} body{{font-family:sans-serif;color:white;padding:18px;max-width:620px;margin:auto}} h1{{color:#a855f7;text-align:center;text-shadow:0 0 18px #a855f7;margin:10px 0 0 0;line-height:1.1}} </style><h1>☠️ TÓXICOS DE<br>BERMUDA ☠️</h1><p style='text-align:center;opacity:0.7;letter-spacing:2px;font-size:13px;margin-top:5px'>HSR RAMSES EDITION</p><div style='display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px 0'><h2 style='margin:0'>Eventos</h2>{admin_btn}</div>{html_eventos}{redes}"
 
 @app.route('/admin', methods=['GET','POST'])
 def admin():
@@ -133,7 +120,16 @@ def nuevo():
     if not es_admin(): return redirect('/admin')
     if request.method=='POST':
         ev=cargar()
-        ev.append({{"id":str(int(datetime.now().timestamp())),"titulo":request.form['titulo'],"fecha":request.form['fecha'],"lugar":request.form['lugar'],"estado":request.form['estado'],"descripcion":request.form['descripcion'],"marcador":request.form['marcador']}})
+        nuevo_evento = {
+            "id": str(int(datetime.now().timestamp())),
+            "titulo": request.form['titulo'],
+            "fecha": request.form['fecha'],
+            "lugar": request.form['lugar'],
+            "estado": request.form['estado'],
+            "descripcion": request.form['descripcion'],
+            "marcador": request.form['marcador']
+        }
+        ev.append(nuevo_evento)
         guardar(ev)
         return redirect('/')
     return f"<meta name='viewport' content='width=device-width'><style>{estilos()} body{{color:white;padding:20px;max-width:600px;margin:auto}} input,select,textarea{{width:100%;padding:12px;margin:8px 0;border-radius:10px;border:none;box-sizing:border-box}} button{{background:#a855f7;padding:12px;width:100%;border:none;border-radius:10px;color:white;font-weight:bold}}</style><h2>Nuevo Evento</h2><form method='post'><input name='titulo' placeholder='Titulo' required><input name='fecha' type='date' required><input name='lugar' placeholder='Lugar' required><select name='estado'><option>proximo</option><option>vivo</option><option>finalizado</option></select><textarea name='descripcion' placeholder='Descripcion'></textarea><input name='marcador' placeholder='Marcador'><button>Guardar</button></form>"
