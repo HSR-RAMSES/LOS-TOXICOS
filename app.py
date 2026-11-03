@@ -9,6 +9,7 @@ DATA_FILE = "eventos.json"
 DUOS_FILE = "duos.json"
 VIDEOS_FILE = "videos.json"
 CHATS_FILE = "chats.json"
+VISITAS_FILE = "visitas.json"
 UPLOAD_FOLDER = "uploads/videos"
 PASSWORD = "toxicos-1.0"
 MAX_DUOS = 12
@@ -77,6 +78,29 @@ def cargar_chats():
     except: return []
 def guardar_chats(d): json.dump(d, open(CHATS_FILE,"w",encoding="utf-8"), indent=2, ensure_ascii=False)
 
+# ===== SISTEMA DE VISITAS SOLO ADMIN =====
+def cargar_visitas():
+    if not os.path.exists(VISITAS_FILE): 
+        return {"total":0, "hoy":0, "fecha": datetime.now().strftime("%d/%m/%Y")}
+    try: return json.load(open(VISITAS_FILE,"r",encoding="utf-8"))
+    except: return {"total":0, "hoy":0, "fecha": datetime.now().strftime("%d/%m/%Y")}
+
+def guardar_visitas(d): json.dump(d, open(VISITAS_FILE,"w",encoding="utf-8"), indent=2, ensure_ascii=False)
+
+def registrar_visita():
+    try:
+        v = cargar_visitas()
+        hoy_str = datetime.now().strftime("%d/%m/%Y")
+        if v.get("fecha") != hoy_str:
+            v["hoy"] = 0
+            v["fecha"] = hoy_str
+        v["total"] = v.get("total",0) + 1
+        v["hoy"] = v.get("hoy",0) + 1
+        guardar_visitas(v)
+        return v
+    except: pass
+# =========================================
+
 def es_admin(): return session.get('admin')==True
 
 def get_youtube_id(url):
@@ -116,8 +140,27 @@ def widget_bot():
 
 @app.route('/')
 def home():
+    stats = registrar_visita()  # Cuenta la visita
     eventos=cargar(); duos=cargar_duos(); videos=cargar_videos()[:3]
+    
     admin_btn = f"<a href='/admin'><button class='btn' style='background:#a855f7'>🔒 Admin</button></a>" if not es_admin() else f"<a href='/mensajes'><button class='btn' style='background:#ffaa00'>💬 Mensajes ({len(cargar_chats())})</button></a> <a href='/logout'><button class='btn' style='background:#ff4444'>Salir</button></a> <a href='/nuevo'><button class='btn btn-p'>+ Evento</button></a>"
+    
+    # PANEL SOLO VISIBLE PARA ADMIN
+    panel_visitas = ""
+    if es_admin():
+        v = cargar_visitas()
+        panel_visitas = f"""
+        <div class='card' style='border:2px solid #00ff88; background:rgba(0,255,136,0.1)'>
+            <h3 style='color:#00ff88; margin:0 0 8px'>👁️ ESTADÍSTICAS - SOLO TÚ VES ESTO</h3>
+            <div style='display:flex; gap:15px; text-align:center'>
+                <div><b style='font-size:22px;color:#a855f7'>{v.get('total',0)}</b><br><small>TOTAL</small></div>
+                <div><b style='font-size:22px;color:#00ff88'>{v.get('hoy',0)}</b><br><small>HOY</small></div>
+                <div><b style='font-size:13px'>{v.get('fecha','')}</b><br><small>FECHA</small></div>
+            </div>
+            <a href='/reset-visitas' style='font-size:11px; color:#ff6666'>Resetear contador</a>
+        </div>
+        """
+
     html_e = "<div class='card' style='text-align:center'><div style='font-size:50px'>📭</div><h3 style='color:#a855f7'>No hay eventos aún</h3></div>" if not eventos else "".join([f"<div class='card' style='border-left:4px solid #a855f7'><b>{e['titulo']}</b> - {e['fecha']}<br><small>{e['lugar']}</small><br><b style='color:#a855f7'>{e.get('marcador','')}</b><br>{e['descripcion']}</div>" for e in eventos])
     cupo = f"{len(duos)}/{MAX_DUOS} DÚOS"
     lista_home = "".join([f"<div style='padding:6px 10px;margin:4px 0;background:rgba(255,255,255,0.06);border-radius:8px;font-size:13px'>{i+1}. <b>{d['duo']}</b> | {d['id1']} + {d['id2']}</div>" for i,d in enumerate(duos)]) if duos else "<small style='opacity:0.5'>Aún no hay dúos</small>"
@@ -150,7 +193,7 @@ def home():
         <a href='{LINK_TIKTOK_BOSTO}' target='_blank' class='btn tt2'>⚔️ BOSTO</a>
         <a href='{LINK_TIKTOK_RONAN}' target='_blank' class='btn tt2'>🔥 RONAN</a>
     </div>"""
-    return f"<meta name='viewport' content='width=device-width, initial-scale=1'><style>{estilos()} body{{font-family:sans-serif;color:white;padding:18px;max-width:650px;margin:auto;padding-bottom:90px}} h1{{color:#a855f7;text-align:center;text-shadow:0 0 18px #a855f7;margin:10px 0 0}} </style><h1>☠️ TÓXICOS DE<br>BERMUDA ☠️</h1><p style='text-align:center;opacity:0.7;letter-spacing:2px;font-size:13px'>HSR RAMSES EDITION</p><div style='display:flex;justify-content:space-between'><h2>Eventos</h2>{admin_btn}</div>{html_e}{redes}{widget_bot()}"
+    return f"<meta name='viewport' content='width=device-width, initial-scale=1'><style>{estilos()} body{{font-family:sans-serif;color:white;padding:18px;max-width:650px;margin:auto;padding-bottom:90px}} h1{{color:#a855f7;text-align:center;text-shadow:0 0 18px #a855f7;margin:10px 0 0}} </style><h1>☠️ TÓXICOS DE<br>BERMUDA ☠️</h1><p style='text-align:center;opacity:0.7;letter-spacing:2px;font-size:13px'>HSR RAMSES EDITION</p><div style='display:flex;justify-content:space-between'><h2>Eventos</h2>{admin_btn}</div>{panel_visitas}{html_e}{redes}{widget_bot()}"
 
 @app.route('/chat/send', methods=['POST'])
 def chat_send():
@@ -186,13 +229,20 @@ def chat_admin_send():
 def mensajes():
     if not es_admin(): return redirect('/admin')
     chats = cargar_chats()
+    v = cargar_visitas()
     html_chats = "".join([f"<div class='card' style='cursor:pointer' onclick=\"openChat('{c['id']}','{c['name']}')\"><b>{c['name']}</b> <small style='opacity:0.5'>{c['last']}</small><br><small>{c['messages'][-1]['text'][:40]}...</small></div>" for c in chats]) or "<div class='card'>No hay mensajes aún</div>"
-    return f"<meta name='viewport' content='width=device-width'><style>{estilos()} body{{font-family:sans-serif;color:white;padding:18px;max-width:650px;margin:auto;padding-bottom:90px}} </style><a href='/' class='btn' style='background:#333'>← Inicio</a><h2>💬 Mensajes BOT-HSR</h2><div style='display:flex;gap:10px;flex-wrap:wrap'><div style='flex:1;min-width:280px'>{html_chats}</div><div id='chat-view' style='flex:1.5;display:none;min-width:280px' class='card'><div id='chat-view-name' style='font-weight:bold;color:#a855f7'></div><div id='chat-view-msgs' style='height:300px;overflow:auto;display:flex;flex-direction:column;gap:6px;background:#0a0614;padding:10px;border-radius:10px'></div><div style='display:flex;gap:6px;margin-top:10px'><input id='admin-input' placeholder='Responde como HSR Ramses...'><button onclick='sendAdmin()' class='btn btn-p'>Enviar</button></div><a id='del-chat' href='#' style='color:#ff6666;font-size:12px'>Borrar</a></div></div><script>let curId=null;function openChat(id,name){{curId=id;document.getElementById('chat-view').style.display='block';document.getElementById('chat-view-name').innerText=name;document.getElementById('del-chat').href='/borrar-chat/'+id;loadAdminChat();}}async function loadAdminChat(){{if(!curId) return;const r=await fetch('/chat/get?chat_id='+curId);const data=await r.json();const cont=document.getElementById('chat-view-msgs');cont.innerHTML='';data.messages.forEach(m=>{{const d=document.createElement('div');d.style.cssText=m.from=='user'?'align-self:flex-start;background:#222;padding:8px 12px;border-radius:12px;max-width:80%;font-size:13px':'align-self:flex-end;background:#a855f7;padding:8px 12px;border-radius:12px;max-width:80%';d.innerText=m.text;cont.appendChild(d);}});cont.scrollTop=9999;}}async function sendAdmin(){{const t=document.getElementById('admin-input').value;if(!t.trim()) return;await fetch('/chat/admin_send',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{chat_id:curId,text:t}})}});document.getElementById('admin-input').value='';loadAdminChat();}}setInterval(()=>{{if(curId) loadAdminChat();}},2000);</script>{widget_bot()}"
+    return f"<meta name='viewport' content='width=device-width'><style>{estilos()} body{{font-family:sans-serif;color:white;padding:18px;max-width:650px;margin:auto;padding-bottom:90px}} </style><a href='/' class='btn' style='background:#333'>← Inicio</a><h2>💬 Mensajes BOT-HSR</h2><div class='card' style='border-color:#00ff88'><b>👁️ Visitas:</b> {v.get('total',0)} totales | {v.get('hoy',0)} hoy ({v.get('fecha','')})</div><div style='display:flex;gap:10px;flex-wrap:wrap'><div style='flex:1;min-width:280px'>{html_chats}</div><div id='chat-view' style='flex:1.5;display:none;min-width:280px' class='card'><div id='chat-view-name' style='font-weight:bold;color:#a855f7'></div><div id='chat-view-msgs' style='height:300px;overflow:auto;display:flex;flex-direction:column;gap:6px;background:#0a0614;padding:10px;border-radius:10px'></div><div style='display:flex;gap:6px;margin-top:10px'><input id='admin-input' placeholder='Responde como HSR Ramses...'><button onclick='sendAdmin()' class='btn btn-p'>Enviar</button></div><a id='del-chat' href='#' style='color:#ff6666;font-size:12px'>Borrar</a></div></div><script>let curId=null;function openChat(id,name){{curId=id;document.getElementById('chat-view').style.display='block';document.getElementById('chat-view-name').innerText=name;document.getElementById('del-chat').href='/borrar-chat/'+id;loadAdminChat();}}async function loadAdminChat(){{if(!curId) return;const r=await fetch('/chat/get?chat_id='+curId);const data=await r.json();const cont=document.getElementById('chat-view-msgs');cont.innerHTML='';data.messages.forEach(m=>{{const d=document.createElement('div');d.style.cssText=m.from=='user'?'align-self:flex-start;background:#222;padding:8px 12px;border-radius:12px;max-width:80%;font-size:13px':'align-self:flex-end;background:#a855f7;padding:8px 12px;border-radius:12px;max-width:80%';d.innerText=m.text;cont.appendChild(d);}});cont.scrollTop=9999;}}async function sendAdmin(){{const t=document.getElementById('admin-input').value;if(!t.trim()) return;await fetch('/chat/admin_send',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{chat_id:curId,text:t}})}});document.getElementById('admin-input').value='';loadAdminChat();}}setInterval(()=>{{if(curId) loadAdminChat();}},2000);</script>{widget_bot()}"
 
 @app.route('/borrar-chat/<id>')
 def borrar_chat(id):
     if not es_admin(): return redirect('/admin')
     guardar_chats([c for c in cargar_chats() if c['id']!=id]); return redirect('/mensajes')
+
+@app.route('/reset-visitas')
+def reset_visitas():
+    if not es_admin(): return redirect('/admin')
+    guardar_visitas({"total":0,"hoy":0,"fecha":datetime.now().strftime("%d/%m/%Y")})
+    return redirect('/')
 
 @app.route('/videos')
 def pag_videos():
