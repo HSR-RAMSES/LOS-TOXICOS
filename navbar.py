@@ -2,8 +2,8 @@
 navbar.py - Barra inferior estilo TikTok + chat de comunidad + perfiles + buscador.
 Va en la MISMA carpeta que app.py. No toca tus rutas existentes.
 
-Pestañas:  🎬 Reels (/videos)  💬 Chat (/comunidad)  🏆 Inscribir (/inscribir)  👤 Perfil (/perfil)
-Arriba a la derecha: 🏠 inicio y 🔍 buscador (/buscar)
+Pestañas:   Reels (/videos)  💬 Chat (/comunidad)  🏆 Inscribir (/inscribir)  👤 Perfil (/perfil)
+Arriba a la derecha:  inicio y 🔍 buscador (/buscar)
 """
 import json, os, re
 from datetime import datetime
